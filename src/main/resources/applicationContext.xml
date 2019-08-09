@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context" xmlns:tx="http://www.springframework.org/schema/tx"
+       xmlns:mybatis-spring="http://mybatis.org/schema/mybatis-spring"
+       xsi:schemaLocation="http://mybatis.org/schema/mybatis-spring http://mybatis.org/schema/mybatis-spring-1.2.xsd   http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd   http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-4.0.xsd   http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-4.0.xsd">
+    <!-- 寻找配置文件 -->
+    <context:property-placeholder location="classpath:db.properties"/>
+    <!-- 配置数据源 -->
+    <bean id="dataSource" class="com.mchange.v2.c3p0.ComboPooledDataSource">
+        <property name="driverClass" value="${jdbc.driver}"/>
+        <property name="jdbcUrl" value="${jdbc.url}"/>
+        <property name="user" value="${jdbc.username}"/>
+        <property name="password" value="${jdbc.password}"/>
+    </bean>
+
+    <!-- 事务管理器 -->
+    <bean id="dataSourceTransactionManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+        <!-- 注入数据源 -->
+        <property name="dataSource" ref="dataSource"/>
+    </bean>
+
+    <!-- 基于注解的事务管理 -->
+    <tx:annotation-driven transaction-manager="dataSourceTransactionManager"/>
+
+    <!--
+        单独mybatis:org.mybatis.spring.SqlSessionFactoryBean
+        整合mp:com.baomidou.mybatisplus.spring.MybatisSqlSessionFactoryBean
+     -->
+    <!-- 配置sqlSessionFactoryBean -->
+    <bean id="sqlSessionFactoryBean" class="com.baomidou.mybatisplus.spring.MybatisSqlSessionFactoryBean">
+        <!-- 数据源 -->
+        <property name="dataSource" ref="dataSource"/>
+        <!-- 主配置文件 -->
+        <property name="configLocation" value="classpath:mybatis-config.xml"/>
+        <!-- 别名处理 -->
+        <property name="typeAliasesPackage" value="com.dpt.mp.bean"/>
+        <!-- 注入MybatisPlus 全局配置 -->
+        <property name="globalConfig" ref="globalConfiguration"/>
+        <!-- 插件注册 -->
+        <property name="plugins">
+            <list>
+                <!-- 注册分页插件 -->
+                <bean class="com.baomidou.mybatisplus.plugins.PaginationInterceptor"/>
+                <!-- 注册执行分析插件 -->
+                <!--<bean class="com.baomidou.mybatisplus.plugins.SqlExplainInterceptor">-->
+                    <!--<property name="stopProceed" value="true"></property>-->
+                <!--</bean>-->
+                <!-- 注册性能分析插件 -->
+                <bean class="com.baomidou.mybatisplus.plugins.PerformanceInterceptor">
+                    <!-- 格式化sql语句 -->
+                    <property name="format" value="true" />
+
+                </bean>
+                <!-- 注册乐观锁插件 -->
+                <bean class="com.baomidou.mybatisplus.plugins.OptimisticLockerInterceptor">
+                </bean>
+            </list>
+        </property>
+    </bean>
+
+    <!-- 定义MybatisPlus的全局定义策略配置:对应了mybatis全局配置文件中的配置-->
+    <bean id="globalConfiguration" class="com.baomidou.mybatisplus.entity.GlobalConfiguration">
+       <!-- 对应mybatis中的mapUnderscoreToCamelCase 开启与数据库字段_对应的驼峰命名，默认为true:开启 -->
+        <property name="dbColumnUnderline" value="true"/>
+        <!-- 全局id生成策略 0：数据库id自增策略；默认是雪花算法 -->
+        <property name="idType" value="0"/>
+        <!-- 全局表前缀配置 -->
+        <property name="tablePrefix" value="tbl_"/>
+        <!-- 注入自定义全局操作 -->
+        <!--<property name="sqlInjector" ref="mysqlInjector"/>-->
+        <!-- 注入逻辑删除 -->
+        <property name="sqlInjector" ref="logicSqlInjector"/>
+        <property name="logicDeleteValue" value="-1"/>
+        <property name="logicNotDeleteValue" value="1"/>
+    </bean>
+
+    <!-- 自定义注入器 -->
+    <bean id="mysqlInjector" class="com.dpt.mp.injector.MysqlInjector"/>
+
+    <!-- 逻辑删除 -->
+    <bean id="logicSqlInjector" class="com.baomidou.mybatisplus.mapper.LogicSqlInjector"/>
+
+    <!-- 配置动态Mapper开发  扫描 -->
+    <bean class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+        <!-- 基本包 -->
+        <property name="basePackage" value="com.dpt.mp.mapper"/>
+    </bean>
+
+</beans>
